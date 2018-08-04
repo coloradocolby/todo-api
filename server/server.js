@@ -80,6 +80,7 @@ app.patch('/todos/:id', (req, res) => {
     });
   }
 
+  // update the completedAt property based off the completed property
   if (_.isBoolean(body.completed) && body.completed) {
     body.completedAt = new Date().getTime();
   } else {
