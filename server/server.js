@@ -40,13 +40,31 @@ app.get('/todos/:id', (req, res) => {
   Todo.findById(req.params.id)
     .then((todo) => {
       if (!todo) {
-        return res.status(404).send()
+        return res.status(404).send();
       }
       res.send({ todo });
     }, (e) => {
       res.status(400).send();
     });
 });
+
+app.delete('/todos/:id', (req, res) => {
+  const { id } = req.params;
+  if (!ObjectID.isValid(id)) {
+    return res.status(404).send({
+      error: 'Invalid ID was sent'
+    });
+  }
+  Todo.findByIdAndRemove(id)
+    .then((todo) => {
+      if (!todo) {
+        return res.status(404).send();
+      }
+      res.send({ todo });
+    }, (e) => {
+      res.status(400).send();
+    });
+})
 
 app.listen(port, () => {
   console.log(`Server listening on port ${port}`);
