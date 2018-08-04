@@ -16,6 +16,7 @@ const todos = [{
 }];
 
 beforeEach((done) => {
+  // reset all todos after each test
   Todo.remove({}).then(() => {
     return Todo.insertMany(todos);
   }).then(() => done());

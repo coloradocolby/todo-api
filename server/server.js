@@ -1,3 +1,4 @@
+require('./config/config');
 const express = require('express');
 const bodyParser = require('body-parser');
 const { ObjectID } = require('mongodb');
@@ -8,7 +9,7 @@ const { Todo } = require('./models/todo');
 const { User } = require('./models/user');
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT;
 
 app.use(bodyParser.json()); // we can now send json to our express app
 
@@ -97,7 +98,6 @@ app.patch('/todos/:id', (req, res) => {
   }).catch((e) => {
     res.status(400).send();
   })
-
 
 });
 
