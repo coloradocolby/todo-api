@@ -39,12 +39,12 @@ app.use((req, res, next) => {
 });
 
 app.post('/todos', (req, res) => {
-  var todo = new Todo({
+  const todo = new Todo({
     text: req.body.text,
   });
   // save model to db
-  todo.save().then((doc) => {
-    res.send(doc);
+  todo.save().then((todoDoc) => {
+    res.send(todoDoc);
   }, (e) => {
     res.status(400).send(e);
   });
@@ -94,11 +94,11 @@ app.delete('/todos/:id', (req, res) => {
 });
 
 app.patch('/todos/:id', (req, res) => {
-  var { id } = req.params;
+  const { id } = req.params;
   // we don't want the user to be able to update just anything, 
   // so we use lodash's pick method to grab a subset of what the
   // user sent us (only things they are allowed to update)
-  var body = _.pick(req.body, ['text', 'completed']);
+  const body = _.pick(req.body, ['text', 'completed']);
 
   if (body.text === '') {
     return res.status(400).send({
@@ -129,6 +129,35 @@ app.patch('/todos/:id', (req, res) => {
     res.status(400).send();
   })
 
+});
+
+app.post('/users', (req, res) => {
+  var body = _.pick(req.body, ['email', 'password']);
+
+  // const user = new User({
+  //   email: body.email,
+  //   password: body.password
+  // });
+
+  // COULD ALSO USE THE FOLLOWING:
+  var user = new User(body);
+
+  // save model to db
+  user.save().then((user) => {
+    return user.generateAuthToken();
+  }).then((token) => {
+    res.header('x-auth', token).send(user);  // an 'x-' header is a custom header
+  }).catch((e) => {
+    res.status(400).send(e);
+  });
+});
+
+app.get('/users', (req, res) => {
+  User.find().then((users) => {
+    res.send({ users });
+  }, (e) => {
+    res.status(400).send(e);
+  });
 });
 
 app.listen(port, () => {
