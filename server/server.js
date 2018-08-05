@@ -7,6 +7,7 @@ const fs = require('fs');
 const path = require('path');
 
 const { mongoose } = require('./db/mongoose');
+const { authenticate } = require('./middleware/authenticate');
 const { Todo } = require('./models/todo');
 const { User } = require('./models/user');
 
@@ -158,6 +159,12 @@ app.get('/users', (req, res) => {
   }, (e) => {
     res.status(400).send(e);
   });
+});
+
+
+
+app.get('/users/me', authenticate, (req, res) => {
+  res.send(req.user);
 });
 
 app.listen(port, () => {

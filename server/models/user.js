@@ -48,6 +48,7 @@ UserSchema.methods.toJSON = function () {
 // note we are using a normal function() call because we need access to 'this' which
 // an arrrow function does not provide
 UserSchema.methods.generateAuthToken = function () {
+  // 'user' because we need the document as the 'this' binding
   var user = this;
   var access = 'auth';
   var token = jwt.sign({ _id: user._id.toHexString(), access }, 'abc123').toString();
@@ -60,6 +61,35 @@ UserSchema.methods.generateAuthToken = function () {
     return token;
   });
 };
+
+// now we need to create a model method
+UserSchema.statics.findByToken = function (token) {
+  // 'User' because we need the model as the 'this' binding
+  var User = this;
+
+  var decoded;
+
+  try {
+    decoded = jwt.verify(token, 'abc123');
+  } catch (e) {
+    // return new Promise((resolve, reject) => {
+    //   reject();
+    // })
+
+    // OR
+
+    return Promise.reject();
+  }
+
+  // we return this because we want to add a promise chain onto our findByToken in server.js
+  return User.findOne({
+    _id: decoded._id,
+    'tokens.token': token,
+    'tokens.access': 'auth'
+
+    // you only need '' when you have a . in the value, e.g. 'tokens.token', 'tokens.access'
+  });
+}
 
 var User = mongoose.model('User', UserSchema);
 
