@@ -6,6 +6,7 @@ const _ = require('lodash');
 const fs = require('fs');
 const path = require('path');
 const bcrypt = require('bcryptjs');
+const morgan = require('morgan');
 
 const { mongoose } = require('./db/mongoose');
 const { authenticate } = require('./middleware/authenticate');
@@ -16,7 +17,7 @@ const app = express();
 const port = process.env.PORT;
 
 app.use(bodyParser.json()); // we can now send json to our express app
-
+app.use(morgan('dev'));
 // tells express where you want static files to be found
 // server.log in the public folder will be accessible @ localhost:3000/server.log 
 // NOTE: because we're not using __dirname, it's looking for the 'public' folder at the root level
@@ -40,9 +41,21 @@ app.use((req, res, next) => {
   next();
 });
 
-app.post('/todos', (req, res) => {
+app.get('/todos', authenticate, (req, res) => {
+  // we want all todos from the user associated with the x-auth token
+  Todo.find({
+    _creator: req.user._id
+  }).then((todos) => {
+    res.send({ todos });
+  }, (e) => {
+    res.status(400).send(e);
+  });
+});
+
+app.post('/todos', authenticate, (req, res) => {
   const todo = new Todo({
     text: req.body.text,
+    _creator: req.user._id
   });
   // save model to db
   todo.save().then((todoDoc) => {
@@ -52,51 +65,51 @@ app.post('/todos', (req, res) => {
   });
 });
 
-app.get('/todos', (req, res) => {
-  Todo.find().then((todos) => {
-    res.send({ todos });
-  }, (e) => {
-    res.status(400).send(e);
-  });
-});
-
-app.get('/todos/:id', (req, res) => {
-  if (!ObjectID.isValid(req.params.id)) {
+app.get('/todos/:id', authenticate, (req, res) => {
+  const id = req.params.id;
+  if (!ObjectID.isValid(id)) {
     res.status(404).send({
       error: 'Invalid ID was sent'
     });
   }
-  Todo.findById(req.params.id)
-    .then((todo) => {
+  Todo.findOne({
+    _id: id,
+    _creator: req.user._id
+  }).then((todo) => {
       if (!todo) {
         return res.status(404).send();
       }
+
       res.send({ todo });
     }, (e) => {
       res.status(400).send();
     });
 });
 
-app.delete('/todos/:id', (req, res) => {
+app.delete('/todos/:id', authenticate, (req, res) => {
   const { id } = req.params;
   if (!ObjectID.isValid(id)) {
     return res.status(404).send({
       error: 'Invalid ID was sent'
     });
   }
-  Todo.findByIdAndRemove(id)
-    .then((todo) => {
+  Todo.findOneAndRemove({
+      _id: id,
+      _creator: req.user._id
+    }).then((todo) => {
       if (!todo) {
         return res.status(404).send();
       }
+      
       res.send({ todo });
     }, (e) => {
       res.status(400).send();
     });
 });
 
-app.patch('/todos/:id', (req, res) => {
+app.patch('/todos/:id', authenticate, (req, res) => {
   const { id } = req.params;
+
   // we don't want the user to be able to update just anything, 
   // so we use lodash's pick method to grab a subset of what the
   // user sent us (only things they are allowed to update)
@@ -107,6 +120,7 @@ app.patch('/todos/:id', (req, res) => {
       error: 'Text cannot be blank!'
     });
   }
+
   if (!ObjectID.isValid(id)) {
     return res.status(404).send({
       error: 'Invalid ID was sent'
@@ -122,7 +136,10 @@ app.patch('/todos/:id', (req, res) => {
   }
 
   // {new: true} will send back the updated todo
-  Todo.findByIdAndUpdate(id, { $set: body }, { new: true }).then((todo) => {
+  Todo.findOneAndUpdate({
+    _id: id,
+    _creator: req.user._id
+  }, { $set: body }, { new: true }).then((todo) => {
     if (!todo) {
       return res.status(404).send();
     }
